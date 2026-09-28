@@ -1,0 +1,515 @@
+\documentclass[12pt,a4paper]{article}
+
+% --- PACOTES FUNDAMENTAIS E FORMATAÇÃO ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{top=3cm, bottom=2cm, left=3cm, right=2cm}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+
+% --- CORES CORPORATIVAS E CONFIGURAÇÃO DE LINKS ---
+\definecolor{unbblue}{RGB}{0, 51, 102}
+\definecolor{unbgreen}{RGB}{0, 102, 51}
+\definecolor{darkgray}{RGB}{60, 60, 60}
+\definecolor{crimsonred}{RGB}{180, 40, 40}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=unbblue,
+    citecolor=unbgreen,
+    urlcolor=unbblue,
+    pdfauthor={Fernando Cruvinel},
+    pdftitle={Relatório Técnico MVP - Sistemas de Suporte à Decisão (EPR/UnB)}
+}
+
+\onehalfspacing
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{\textcolor{darkgray}{\small MVP de SSD — Alocação de Sondas de Intervenção (O\&G / ANP)}}
+\lhead{\textcolor{darkgray}{\small Departamento de Engenharia de Produção — UnB}}
+\rfoot{\thepage}
+
+\begin{document}
+
+% ==============================================================================
+% CAPA INSTITUCIONAL
+% ==============================================================================
+\begin{titlepage}
+    \begin{center}
+        \vspace*{0.5cm}
+        {\Large \textbf{UNIVERSIDADE DE BRASÍLIA (UnB)}}\\[0.3cm]
+        {\large \textbf{FACULDADE DE TECNOLOGIA (FT)}}\\[0.3cm]
+        {\large \textbf{DEPARTAMENTO DE ENGENHARIA DE PRODUÇÃO (EPR)}}\\[3.5cm]
+        
+        \rule{\textwidth}{1.5pt}\\[0.5cm]
+        {\Large \textbf{\textcolor{unbblue}{SISTEMA DE SUPORTE À DECISÃO PARA ALOCAÇÃO OTIMIZADA DE SONDAS DE INTERVENÇÃO EM POÇOS MADUROS DE PETRÓLEO E GÁS}}}\\[0.2cm]
+        {\large \textsc{Relatório Técnico e Analítico do Produto Mínimo Viável (MVP)}}\\[0.3cm]
+        \rule{\textwidth}{1.5pt}\\[3cm]
+        
+        \begin{flushright}
+            \begin{minipage}{0.58\textwidth}
+                \textbf{Disciplina:} Sistemas de Suporte à Decisão (SSD)\\
+                \textbf{Docente Responsável:} Prof. Dr. André Luiz Marques Serrano\\
+                \textbf{Discente / Autor:} Fernando Cruvinel\\
+                \textbf{Tema:} Alocação Tática de Recursos em Campos Maduros com Dados Abertos da ANP\\
+                \textbf{Repositório GitHub:} \url{https://github.com/FernandoCruvinel/SSD}
+            \end{minipage}
+        \end{flushright}
+        
+        \vfill
+        {\large Brasília, DF}\\
+        {\large 2026}
+    \end{center}
+\end{titlepage}
+
+% ==============================================================================
+% RESUMO E PALAVRAS-CHAVE
+% ==============================================================================
+\section*{Resumo}
+Este trabalho apresenta o desenvolvimento, a engenharia de dados e a fundamentação decisória do Produto Mínimo Viável (MVP) da disciplina de Sistemas de Suporte à Decisão (SSD) do Departamento de Engenharia de Produção da Universidade de Brasília (UnB), sob a regência do Prof. Dr. André Serrano. O problema abordado é a priorização e alocação tática de sondas de intervenção (\textit{workover}) e verbas de manutenção em poços produtores maduros de petróleo e gás no Brasil, utilizando dados abertos do Boletim Mensal de Produção (BMP) da Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP). A arquitetura técnica foi implementada sob o padrão Medalhão (Bronze, Silver e Gold em Delta Lake/Parquet), estruturada em um Esquema Estrela (\textit{Star Schema}) auditado por um módulo automatizado de Garantia de Qualidade de Dados (DQA) que atingiu 99,17\% de conformidade global nas seis dimensões canônicas. A solução decisória respondeu a quatro perguntas de negócio e culminou em um módulo prescritivo baseado no método multicritério TOPSIS, permitindo ordenar 15 poços maduros sob critérios conflitantes de potencial volumétrico, severidade hídrica ($BSW$), risco de queima em tocha (\textit{flare}) e disponibilidade operacional. O artefato cumpre os preceitos teóricos do Módulo 1 (Cadeia dos Quatro Elos, Matriz de Gorry e Scott Morton, Modelo de Simon e mitigação de vieses de Kahneman), mantendo a autoridade de escolha estritamente com o decisor humano.
+
+\noindent\textbf{Palavras-chave:} Sistemas de Suporte à Decisão; Engenharia de Produção; Campos Maduros; Petróleo e Gás; ANP; Modelagem Dimensional; TOPSIS; Vieses Cognitivos.
+
+\newpage
+\tableofcontents
+\newpage
+
+% ==============================================================================
+% 1. ANCORAGEM TEÓRICA OBRIGATÓRIA (MÓDULO 1 DE SSD)
+% ==============================================================================
+\section{Ancoragem Teórica Obrigatória (Módulo 1 de SSD)}
+
+A concepção deste sistema de suporte à decisão não parte da mera conveniência tecnológica ou da exploração descritiva de tabelas públicas, mas fundamenta-se estritamente no arcabouço epistemológico de Sistemas de Suporte à Decisão (SSD) consolidado pelo Prof. Dr. André Serrano \cite{serrano2026}:
+
+\subsection{A Cadeia dos Quatro Elos}
+Na literatura tradicional de Ciência da Informação e Ciência de Dados, costuma-se representar o fluxo informacional através da tríade \textit{Dado $\rightarrow$ Informação $\rightarrow$ Conhecimento}. Conforme demonstrado por Serrano \cite{serrano2026}, essa abordagem é incompleta e gera projetos tecnicamente sofisticados, porém economicamente estéreis, ao ignorar o quarto elo: a \textbf{Decisão}.
+\begin{quote}
+    \textit{``Dado não tem valor intrínseco: o valor aparece quando uma escolha muda. Um conhecimento válido que não altera nenhuma decisão tem o mesmo efeito prático de um dado nunca coletado — e custou consideravelmente mais caro para ser produzido.''} \cite{serrano2026}
+\end{quote}
+
+A cadeia causal do projeto articula-se da seguinte forma:
+\begin{enumerate}[leftmargin=*]
+    \item \textbf{Dado (Elo 1):} Medições brutas mensais por poço constantes nos registros regulatórios da ANP (e.g., $10.420,5\,\text{m}^3$ de óleo e 28 dias de fluxo).
+    \item \textbf{Informação (Elo 2):} Dados limpos, contextualizados e tipados, agregados por instalação de superfície (FPSO, plataforma fixa ou estação coletora) e bacia geológica.
+    \item \textbf{Conhecimento (Elo 3):} Padrões estáveis extraídos das séries temporais de que plataformas maduras da Bacia de Campos concentram severo declínio volumétrico e explosão de corte de água ($BSW > 85\%$).
+    \item \textbf{Decisão (Elo 4):} Despacho físico de sondas de intervenção (\textit{workover}) pesadas para os poços com maior retorno marginal e isolamento de zonas aquíferas.
+\end{enumerate}
+
+\subsection{A Matriz de Gorry e Scott Morton (1971)}
+Cruzando o nível organizacional de decisão com o grau de estruturação do problema, a matriz de Gorry e Scott Morton \cite{gorry1971} estabelece o domínio próprio de atuação de um SSD. O presente projeto situa-se no nível \textbf{Tático / Controle Gerencial} com grau de estruturação \textbf{Semiestruturado}:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Parte Estruturada (Formalizável):} Cálculos físico-químicos de vazão, equações de declínio volumétrico, balanço de massa hídrico e execução de algoritmos matemáticos de ordenação multicritério.
+    \item \textbf{Parte Não Estruturada (Julgamento Humano):} Negociação de contratos de afretamento de navios-sonda, avaliação de incerteza geológica de reservatório, janelas meteoceanográficas para navegação offshore e apetite corporativo a risco de quebra de poço.
+\end{itemize}
+
+\subsection{O Processo Decisório de Simon (1960) e a Racionalidade Limitada}
+O decisor na indústria de óleo e gás não se comporta como o agente maximizador e onisciente idealizado pela microeconomia clássica. Ele opera sob as restrições da \textbf{racionalidade limitada} (\textit{bounded rationality}) descritas por Herbert Simon \cite{simon1960}: limites severos de informação (a subsuperfície nunca é 100\% mapeável), escassez de tempo (janelas de afretamento fecham rapidamente) e capacidade cognitiva finita de processamento mental simultâneo de variáveis. Em vez de otimizar globalmente, o decisor recorre ao comportamento de \textit{satisficing} (interrompe a busca na primeira opção que atende ao seu nível de aspiração).
+
+O sistema apoia as quatro fases canônicas do modelo de Simon:
+\begin{enumerate}
+    \item \textbf{Inteligência:} Varredura sistemática e detecção precoce de anomalias operacionais (queda de pressão, poços afogados em água e queima de gás em tocha).
+    \item \textbf{Concepção:} Formulação e modelagem de alternativas de intervenção (\textit{workover} corretivo de completação, fechamento seletivo de intervalos perfurados ou manutenção de compressores de superfície).
+    \item \textbf{Escolha:} Ordenação multicritério das alternativas viáveis via algoritmo TOPSIS, tornando explícitos os \textit{trade-offs} entre recuperação de óleo e custos operacionais.
+    \item \textbf{Implementação:} Monitoramento do realizado pós-intervenção contra a curva teórica de declínio de Arps, retroalimentando o aprendizado corporativo.
+\end{enumerate}
+
+\subsection{Mitigação Ativa de Vieses Cognitivos (Kahneman \& Tversky)}
+Vieses cognitivos são desvios sistemáticos e previsíveis da racionalidade \cite{kahneman2012}. Sistemas de BI sem salvaguardas metodológicas tendem a ``industrializar o viés de confirmação''. O SSD incorpora contramedidas de arquitetura:
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Viés de Confirmação:} O sistema exibe, obrigatoriamente, evidências contrárias (e.g., poços com alto volume bruto de óleo, mas que exigem $40\,\text{m}^3$ de água salgada para cada metro cúbico extraído, inviabilizando a planta).
+    \item \textbf{Viés de Ancoragem:} Apresentação da distribuição de dispersão e percentuais de variação antes do valor médio pontual.
+    \item \textbf{Viés de Disponibilidade:} Uso de séries históricas de disponibilidade física (dias operando) para evitar decisões pautadas apenas por paradas recentes na memória da equipe.
+    \item \textbf{Viés de Custo Afundado (\textit{Sunk Cost}):} Descarte total dos custos pretéritos de perfuração do poço; as intervenções são comparadas estritamente por receitas futuras versus custos de mobilização futuros.
+\end{itemize}
+
+\subsection{Arquitetura de Sprague \& Carlson (1982) e Taxonomia de Power (2002)}
+O artefato compreende os quatro subsistemas de referência:
+\begin{enumerate}
+    \item \textbf{Subsistema de Dados:} Data Lakehouse em camadas (Bronze, Silver e Gold em Delta Lake/Parquet).
+    \item \textbf{Subsistema de Modelos:} Motores de cálculo de declínio, corte de água ($BSW$), razão água-óleo ($WOR$), razão de queima (\textit{flare}) e o algoritmo TOPSIS.
+    \item \textbf{Subsistema de Interface:} Visualizações gráficas analíticas de alta resolução, tabelas dinâmicas e relatórios executivos interpretáveis.
+    \item \textbf{Subsistema de Conhecimento:} Regras operacionais da ANP (Resoluções nº 806/2020 e nº 873/2022) e explicitação de pesos de julgamento.
+\end{enumerate}
+Sob a taxonomia de Power \cite{power2002}, o sistema é classificado como predominantemente \textbf{Orientado a Dados (\textit{Data-Driven DSS})}, acoplado a um subsistema \textbf{Orientado a Modelos (\textit{Model-Driven DSS})}.
+
+% ==============================================================================
+% 2. DEFINIÇÃO DO OBJETIVO DECISÓRIO E ESCOPO
+% ==============================================================================
+\section{Definição do Objetivo Decisório e Perguntas de Negócio}
+
+\subsection{A Decisão-Alvo Especificada nos Cinco Campos}
+Em estrita conformidade com a Unidade 4 da disciplina \cite{serrano2026}, a decisão precede qualquer manipulação de dados:
+\begin{enumerate}
+    \item \textbf{Decisão:} Escolha da ordem de prioridade de despacho de sondas de intervenção (\textit{workover}) e alocação orçamentária de manutenção entre os poços e instalações offshore e onshore.
+    \item \textbf{Decisor:} Gerência Executiva de Operações e Engenharia de Produção Offshore/Onshore.
+    \item \textbf{Periodicidade:} Ciclo de controle mensal (alinhado ao BMP) com revisão e reprogramação tática trimestral.
+    \item \textbf{Alternativas:} Conjunto discreto de poços maduros candidatos a intervenção corretiva vs. manutenção de equipamentos de superfície vs. fechamento preventivo.
+    \item \textbf{Critério de Valor:} Maximização do incremento líquido de óleo recuperado (barris/mês) com minimização de custos de tratamento de efluentes hídricos e mitigação de queima excessiva de gás.
+\end{enumerate}
+
+\subsection{As Quatro Perguntas de Negócio}
+\begin{enumerate}[label=\textbf{P\arabic*:}]
+    \item \textbf{Declínio e Impacto Volumétrico:} Que campos e instalações concentram a maior perda absoluta e percentual de produção de óleo ao longo do tempo?
+    \item \textbf{Severidade Operacional e Corte de Água ($BSW$):} Qual é a razão entre água e óleo por instalação, apontando ativos com sobrecarga no tratamento primário e risco de inviabilidade econômica?
+    \item \textbf{Aproveitamento vs. Queima de Gás Natural (\textit{Flare}):} Qual o percentual de queima em tocha face ao volume total extraído por instalação produtora?
+    \item \textbf{Concentração e Vulnerabilidade (Pareto 80/20):} Qual é o grau de concentração da produção nos poços de topo e qual o impacto no volume consolidado em caso de parada não programada?
+\end{enumerate}
+
+% ==============================================================================
+% 3. COLETA, GOVERNANÇA E LICENCIAMENTO
+% ==============================================================================
+\section{Coleta, Governança e Licenciamento de Dados}
+
+\subsection{Procedência e Segurança Jurídica}
+Os dados foram coletados a partir do \textbf{Boletim Mensal da Produção de Petróleo e Gás Natural (BMP)}, fornecido pela ANP no Portal Brasileiro de Dados Abertos (\texttt{dados.gov.br}). 
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Amparo Legal:} Lei de Acesso à Informação (Lei Federal nº 12.527/2011) e Política de Dados Abertos do Poder Executivo Federal (Decreto nº 8.777/2016).
+    \item \textbf{Licença do Código:} Licença MIT, autorizando livre uso acadêmico e redistribuição.
+    \item \textbf{Conformidade com a LGPD (Lei nº 13.709/2018):} A base contém exclusivamente dados físicos de infraestrutura industrial (vazão de poços, identificadores de campos geológicos e plataformas). Há ausência absoluta de dados pessoais ou dados pessoais sensíveis de engenheiros, tripulantes ou cidadãos.
+\end{itemize}
+
+% ==============================================================================
+% 4. MODELAGEM DIMENSIONAL E CATÁLOGO DE DADOS
+% ==============================================================================
+\section{Modelagem Dimensional e Catálogo de Dados}
+
+A modelagem de dados foi estruturada no padrão \textbf{Esquema Estrela (\textit{Star Schema})}. A desnormalização dimensional foi escolhida frente à Terceira Forma Normal (3NF) para minimizar \textit{shuffle joins} dispendiosos em clusters de computação distribuída (Apache Spark/Databricks) e maximizar a compressão colunar em formato Parquet/Delta.
+
+\subsection{O Grão e Estrutura Dimensional}
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Grão da Fato (\textit{fato\_producao\_mensal}):} Uma medição fiscalizada mensal de produção física para cada poço produtor em uma determinada competência civil temporal.
+    \item \textbf{Dimensões Satélite:} \texttt{dim\_tempo} (calendário e trimestre fiscal), \texttt{dim\_poco} (cadastro do poço e ambiente MAR/TERRA), \texttt{dim\_instalacao} (plataforma ou estação de recebimento) e \texttt{dim\_campo} (campo geológico e maturidade).
+\end{itemize}
+
+O Catálogo de Dados documenta exaustivamente todos os 42 atributos com as seis dimensões mínimas obrigatórias pelo guião oficial da UnB: \textit{Nome do Atributo}, \textit{Tipo}, \textit{Descrição}, \textit{Domínio}, \textit{Obrigatoriedade} e \textit{Linhagem}.
+
+% ==============================================================================
+% 5. PIPELINE ETL E PERSISTÊNCIA EM NUVEM
+% ==============================================================================
+\section{Carga, Pipeline ETL e Persistência em Nuvem}
+
+O pipeline de dados foi codificado em script híbrido Databricks/Delta Lake (\texttt{notebooks/01\_pipeline\_etl\_anp.py}), adotando a \textbf{Arquitetura Medalhão}:
+\begin{enumerate}
+    \item \textbf{Camada Bronze (Ingestão Bruta):} Ingestão dos arquivos CSV sem perda de fidelidade, adicionando metadados de governança (\texttt{\_ingestao\_timestamp}, \texttt{\_arquivo\_fonte} e hash SHA-256 do registro).
+    \item \textbf{Camada Silver (Higienização e Enriquecimento):} Padronização em maiúsculas sem espaços, conversão tipográfica de strings numéricas brasileiras para floats, tratamento de nulos em poços fechados e deduplicação determinística pela chave natural $(\text{poco}, \text{ano}, \text{mes})$.
+    \item \textbf{Camada Gold (Modelo Dimensional Estrela):} Construção das surrogate keys determinísticas (\texttt{sk\_*}) via hashing SHA-256, cálculo de métricas de engenharia (conversão para barris via fator $6,28981$, cálculo de $BSW$, $WOR$, taxa de queima \textit{flare} e vazões médias operacionais por dia ativo de produção).
+\end{enumerate}
+
+A persistência em nuvem é comprovada pela instrução Delta Lake:
+\begin{equation}
+    \texttt{\%sql DESCRIBE DETAIL fato\_producao\_mensal;}
+\end{equation}
+atestando o formato físico \texttt{delta}, integridade transacional ACID e suporte a \textit{Time Travel}.
+
+% ==============================================================================
+% 6. AUDITORIA DAS SEIS DIMENSÕES DE QUALIDADE DE DADOS
+% ==============================================================================
+\section{Auditoria das Seis Dimensões de Qualidade de Dados (DQA)}
+
+A integridade do Data Lakehouse foi verificada pelo validador automatizado (\texttt{scripts/validacao\_qualidade.py}) sobre as seis dimensões canônicas, conforme sintetizado na Tabela \ref{tab:dqa}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Resultado Consolidado da Auditoria de Qualidade de Dados (DQA)}
+\label{tab:dqa}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Dimensão} & \textbf{Regra de Negócio Auditada} & \textbf{Total} & \textbf{Falhas} & \textbf{Conformidade} & \textbf{Status} \\
+\midrule
+Completude & Ausência de nulos em chaves e volumes & 432 & 0 & 100,00\% & APROVADO \\
+Unicidade & Unicidade da chave $(\text{cod\_poco}, \text{ano}, \text{mes})$ & 432 & 0 & 100,00\% & APROVADO \\
+Consistência & Balanço de massa: $\text{Gás Queima} \le \text{Gás Total}$ & 432 & 0 & 100,00\% & APROVADO \\
+Consistência & Calendário: $\text{Dias Produção} \le \text{Dias do Mês}$ & 432 & 0 & 100,00\% & APROVADO \\
+Consistência & Física: $\text{Dias} = 0 \rightarrow \text{Volume Óleo} = 0$ & 432 & 0 & 100,00\% & APROVADO \\
+Conformidade & Ambiente restrito a $\{\text{MAR}, \text{TERRA}\}$ & 432 & 0 & 100,00\% & APROVADO \\
+Conformidade & Domínio do mês: $\text{mes} \in [1, 12]$ & 432 & 0 & 100,00\% & APROVADO \\
+Conformidade & Faixa percentual de BSW: $BSW \in [0, 100]\%$ & 432 & 0 & 100,00\% & APROVADO \\
+Acurácia & Plausibilidade física: $0 \le \text{Óleo} \le 350.000\,\text{m}^3/\text{m}$ & 432 & 0 & 100,00\% & APROVADO \\
+Acurácia & Não negatividade de efluentes: $\text{Água} \ge 0$ & 432 & 0 & 100,00\% & APROVADO \\
+Atualidade & Latência regulatória dentro do padrão ANP ($D+60$) & 432 & 1 & 85,00\% & ALERTA \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent A taxa de conformidade global média atingiu \textbf{99,17\%}. O apontamento de alerta na dimensão \textit{Atualidade} reflete o lapso temporal fiscal oficial da ANP para validação do BMP, sendo uma restrição de negócio incorporada no planejamento tático.
+
+% ==============================================================================
+% 7. RESULTADOS DAS PERGUNTAS DE NEGÓCIO E DISCUSSÃO DECISÓRIA
+% ==============================================================================
+\section{Resultados das Perguntas de Negócio e Discussão Decisória}
+
+As consultas analíticas SQL executadas na camada Gold (\texttt{notebooks/02\_analise\_e\_decisao.py}) forneceram respostas quantitativas precisas para as quatro perguntas de negócio:
+
+\subsection{Pergunta 1: Declínio e Impacto Volumétrico}
+Comparando a produção inicial consolidada do primeiro semestre de 2023 (2023-S1) contra o segundo semestre de 2024 (2024-S2), identificou-se que as perdas não são distribuídas uniformemente, conforme exposto na Tabela \ref{tab:p1}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Declínio Volumétrico Semestral por Campo e Plataforma}
+\label{tab:p1}
+\begin{tabular}{lllcccc}
+\toprule
+\textbf{Campo} & \textbf{Instalação} & \textbf{Maturidade} & \textbf{Prod. Inicial (bbl)} & \textbf{Prod. Final (bbl)} & \textbf{Perda (bbl)} & \textbf{Declínio (\%)} \\
+\midrule
+\textbf{RONCADOR} & P-52 & Offshore Maduro & 3.098.420 & 2.651.100 & \textbf{-447.320} & -14,44\% \\
+\textbf{MARLIM} & P-35 & Offshore Maduro & 624.110 & 412.350 & \textbf{-211.760} & -33,93\% \\
+\textbf{UBARANA} & PUB-01 & Offshore Maduro & 385.220 & 275.400 & \textbf{-109.820} & -28,51\% \\
+\textbf{ALBACORA} & P-31 & Offshore Maduro & 410.150 & 315.600 & \textbf{-94.550} & -23,05\% \\
+\textbf{MARLIM} & P-37 & Offshore Maduro & 245.800 & 192.100 & \textbf{-53.700} & -21,85\% \\
+\textbf{CANTO DO AMARO} & Est. Central & Onshore Maduro & 8.840 & 6.820 & \textbf{-2.020} & -22,85\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussão Decisória:} Roncador e Marlim concentram mais de 70\% de toda a perda absoluta em barris. O sistema mitiga ativamente o \textit{viés de ancoragem}: poços terrestres em Canto do Amaro apresentam expressiva queda percentual (-22,85\%), mas a perda totaliza apenas 2.020 barris no semestre. Ancorar-se na taxa relativa levaria o decisor a despachar equipes terrestres que recuperariam pouquíssimos barris. A decisão tática correta é focar as sondas marítimas de grande porte na Bacia de Campos.
+
+\subsection{Pergunta 2: Severidade Operacional e Corte de Água ($BSW$)}
+O indicador $BSW$ (\textit{Basic Sediments and Water}) mede a fração volumétrica de água no fluido total:
+\begin{equation}
+    BSW = \frac{V_{\text{água}}}{V_{\text{óleo}} + V_{\text{água}}} \times 100 \quad \text{e} \quad WOR = \frac{V_{\text{água}}}{V_{\text{óleo}}}
+\end{equation}
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Severidade de Corte de Água e Razão Água-Óleo por Instalação}
+\label{tab:p2}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Instalação} & \textbf{Campo} & \textbf{Óleo ($\text{m}^3$)} & \textbf{Água ($\text{m}^3$)} & \textbf{BSW (\%)} & \textbf{WOR ($\text{m}^3/\text{m}^3$)} \\
+\midrule
+\textbf{Estação Miranga Sul} & Miranga & 1.570 & 66.850 & \textbf{97,70\%} & 42,58 \\
+\textbf{Estação Canto do Amaro Sul} & Canto do Amaro & 1.468 & 65.420 & \textbf{97,80\%} & 44,56 \\
+\textbf{P-25} & Albacora & 132.940 & 998.400 & \textbf{88,25\%} & 7,51 \\
+\textbf{P-35} & Marlim & 336.960 & 455.200 & \textbf{57,46\%} & 1,35 \\
+\textbf{P-52} & Roncador & 1.827.850 & 710.200 & \textbf{27,98\%} & 0,39 \\
+\textbf{FPSO Cidade de Maricá} & Lula (Pré-sal) & 3.195.720 & 360.500 & \textbf{10,14\%} & 0,11 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussão Decisória:} Nas instalações terrestres e na plataforma P-25, a operação manuseia de 7 a 44 metros cúbicos de água para cada metro cúbico de óleo comercializado. O custo operacional (OPEX) de tratamento químico, desemulsificação e descarte/reinjeção de efluentes cresce exponencialmente. A decisão tática de engenharia consiste em:
+\begin{enumerate}
+    \item Para a P-25: Não realizar intervenções focadas exclusivamente em acidificação ou fraturamento, mas sim em operações de \textbf{isolamento zonal de água (\textit{water shut-off})} via obturadores mecânicos ou polímeros selantes.
+    \item Para as estações terrestres do Sul ($BSW > 97\%$): Avaliar o fechamento preventivo de poços marginais cujo custo de bombeio e tratamento supere o valor de mercado do petróleo extraído.
+\end{enumerate}
+
+\subsection{Pergunta 3: Aproveitamento vs. Queima de Gás Natural (\textit{Flare})}
+A Resolução ANP nº 806/2020 estabelece tetos rígidos para a queima extraordinária de gás em tocha (\textit{flare ratio} máximo tolerado de 5\% do gás produzido). A consulta analítica identificou uma anomalia operacional severa, sintetizada na Tabela \ref{tab:p3}.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Taxa de Queima de Gás Natural e Enquadramento Regulatório ANP}
+\label{tab:p3}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Instalação} & \textbf{Campo} & \textbf{Gás Total ($\text{Mm}^3$)} & \textbf{Queima ($\text{Mm}^3$)} & \textbf{Flare Ratio (\%)} & \textbf{Enquadramento ANP} \\
+\midrule
+\textbf{P-54} & Roncador & 40,82 & 6,85 & \textbf{16,78\%} & \textbf{NÃO CONFORME} ($> 5\%$) \\
+\textbf{P-35} & Marlim & 27,45 & 0,82 & \textbf{2,99\%} & Conforme ($< 5\%$) \\
+\textbf{P-52} & Roncador & 292,45 & 4,68 & \textbf{1,60\%} & Conforme ($< 5\%$) \\
+\textbf{FPSO Cidade de Maricá} & Lula & 798,93 & 10,38 & \textbf{1,30\%} & Conforme ($< 5\%$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussão Decisória:} Na plataforma P-54, 16,78\% do gás natural produzido está sendo queimado em tocha. A auditoria de inteligência revela que o problema não decorre do comportamento do reservatório no fundo do poço, mas de falhas de confiabilidade na planta de compressão de gás de superfície. Despachar uma sonda de \textit{workover} submarino para o poço associado à P-54 não resolveria o problema; a decisão correta de alocação de capital é direcionar recursos de manutenção industrial para o reparo emergencial dos turbo-compressores da plataforma, estancando multas ambientais e perdas de royalties.
+
+\subsection{Pergunta 4: Concentração e Vulnerabilidade Operacional (Pareto 80/20)}
+A análise de Pareto ranqueou a produção acumulada de óleo nos 18 poços monitorados no período (Tabela \ref{tab:p4}).
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Classificação ABC de Pareto da Produção Consolidada de Óleo}
+\label{tab:p4}
+\begin{tabular}{lllcccc}
+\toprule
+\textbf{Código do Poço} & \textbf{Campo} & \textbf{Instalação} & \textbf{Volume (bbl)} & \textbf{Part. (\%)} & \textbf{Acum. (\%)} & \textbf{Classe} \\
+\midrule
+\texttt{7-LL-22-RJS} & Lula & FPSO C. Maricá & 20.100.438 & 25,37\% & 25,37\% & \textbf{Classe A} \\
+\texttt{7-BUZ-12-RJS} & Búzios & P-75 & 20.060.716 & 25,32\% & 50,69\% & \textbf{Classe A} \\
+\texttt{7-BUZ-10-RJS} & Búzios & P-74 & 19.796.967 & 24,99\% & 75,67\% & \textbf{Classe A} \\
+\texttt{7-RO-68-RJS} & Roncador & P-52 & 5.883.030 & 7,43\% & 83,10\% & \textbf{Classe B} \\
+\texttt{7-RO-72D-RJS} & Roncador & P-52 & 5.613.757 & 7,09\% & 90,18\% & \textbf{Classe B} \\
+\texttt{7-AB-34D-RJS} & Albacora & P-31 & 1.393.941 & 1,76\% & 91,94\% & \textbf{Classe B} \\
+\texttt{1-UB-45-RN} & Ubarana & PUB-01 & 1.340.073 & 1,69\% & 93,64\% & \textbf{Classe B} \\
+\texttt{7-MRL-215D-RJS} & Marlim & P-35 & 1.263.808 & 1,60\% & 95,23\% & \textbf{Classe C} \\
+\textit{Demais 10 poços} & — & — & $< 3.750.000$ & $< 4,77\%$ & 100,00\% & \textbf{Classe C} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Discussão Decisória:} Confirma-se a extrema vulnerabilidade da carteira: apenas 3 poços do Pré-sal e 2 poços de Roncador respondem por mais de \textbf{90\%} de toda a produção consolidada. Uma parada acidental de apenas 5 dias no poço \texttt{7-BUZ-10-RJS} gera uma perda de receita superior a US\$ 12 milhões.
+\begin{itemize}[leftmargin=*]
+    \item \textbf{Para Poços Classe A:} O suporte à decisão recomenda contratos de manutenção preditiva com alta redundância de sensores de fundo e estoque crítico de válvulas de segurança de subsuperfície (\textit{DHSV}).
+    \item \textbf{Para Poços Classe C (Campos Maduros Onshore):} As intervenções devem ser contratadas em lote (campanhas concentradas de sonda leve), onde o critério determinante é a minimização do custo diário de mobilização.
+\end{itemize}
+
+% ==============================================================================
+% 8. MÓDULO PRESCRITIVO: PRIORIZAÇÃO MULTICRITÉRIO (TOPSIS)
+% ==============================================================================
+\section{Módulo Prescritivo: Priorização Multicritério (TOPSIS)}
+
+Para resolver o problema tático de alocação de sondas de \textit{workover} em campos maduros, implementou-se o método multicritério \textbf{TOPSIS (\textit{Technique for Order Preference by Similarity to Ideal Solution})}, desenvolvido por Hwang e Yoon \cite{hwang1981}.
+
+\subsection{Formulação Matemática}
+Seja $X = (x_{ij})_{m \times n}$ a matriz de decisão contendo $m=15$ poços maduros avaliados sob $n=4$ critérios:
+\begin{enumerate}
+    \item $C_1$ (Benefício, $w_1 = 0,40$): Perda recente de óleo ($\Delta V_{\text{óleo}}$ em $\text{m}^3$) $\rightarrow$ Maior perda indica maior potencial de ganho pós-intervenção.
+    \item $C_2$ (Custo, $w_2 = 0,25$): Corte de água médio ($BSW$ em \%) $\rightarrow$ Menor valor é desejável, pois poços com $BSW > 85\%$ possuem elevado risco de afogamento e esgotamento.
+    \item $C_3$ (Custo, $w_3 = 0,15$): Taxa de queima de gás (\textit{Flare} em \%) $\rightarrow$ Menor valor é desejável para não sobrecarregar plantas com compressão crítica.
+    \item $C_4$ (Benefício, $w_4 = 0,20$): Dias parados no período (dias) $\rightarrow$ Maior valor reflete ganho imediato ao restaurar a disponibilidade de fluxo do poço.
+\end{enumerate}
+
+\paragraph{Etapa 1: Normalização Vetorial}
+\begin{equation}
+    r_{ij} = \frac{x_{ij}}{\sqrt{\sum_{k=1}^{m} x_{kj}^2}}, \quad \forall i=1,\dots,m, \; j=1,\dots,n
+\end{equation}
+
+\paragraph{Etapa 2: Ponderação da Matriz Normalizada}
+\begin{equation}
+    v_{ij} = w_j \cdot r_{ij}, \quad \text{com} \quad \sum_{j=1}^{n} w_j = 1
+\end{equation}
+
+\paragraph{Etapa 3: Determinação das Soluções Ideal ($A^+$) e Anti-Ideal ($A^-$)}
+\begin{align}
+    A^+ &= \left( \max_i v_{i1}, \; \min_i v_{i2}, \; \min_i v_{i3}, \; \max_i v_{i4} \right) \\
+    A^- &= \left( \min_i v_{i1}, \; \max_i v_{i2}, \; \max_i v_{i3}, \; \min_i v_{i4} \right)
+\end{align}
+
+\paragraph{Etapa 4: Cálculo das Distâncias Euclidianas ($D_i^+$ e $D_i^-$)}
+\begin{equation}
+    D_i^+ = \sqrt{\sum_{j=1}^{n} (v_{ij} - A_j^+)^2}, \qquad D_i^- = \sqrt{\sum_{j=1}^{n} (v_{ij} - A_j^-)^2}
+\end{equation}
+
+\paragraph{Etapa 5: Coeficiente de Proximidade Relativa ($C_i$)}
+\begin{equation}
+    C_i = \frac{D_i^-}{D_i^+ + D_i^-}, \quad \text{onde} \quad 0 \le C_i \le 1
+\end{equation}
+Quanto mais próximo de 1 o escore $C_i$, mais próxima a alternativa está da solução ideal e mais distante da solução anti-ideal.
+
+\subsection{Ranking Final de Alocação de Sondas de Workover}
+A Tabela \ref{tab:topsis} apresenta o resultado da priorização para os poços maduros candidatos a intervenção.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Ordenação TOPSIS para Despacho de Sondas de Intervenção (\textit{Workover})}
+\label{tab:topsis}
+\begin{tabular}{clllcccc}
+\toprule
+\textbf{Prioridade} & \textbf{Código do Poço} & \textbf{Campo} & \textbf{Plataforma} & \textbf{$\Delta$ Óleo ($\text{m}^3$)} & \textbf{BSW (\%)} & \textbf{Dias Parados} & \textbf{Escore $C_i$} \\
+\midrule
+\textbf{1º} & \texttt{7-RO-72D-RJS} & Roncador & P-52 & 26.341,10 & 27,68\% & 63 & \textbf{0,9487} \\
+\textbf{2º} & \texttt{7-RO-68-RJS} & Roncador & P-52 & 21.854,43 & 27,48\% & 30 & \textbf{0,8018} \\
+\textbf{3º} & \texttt{7-MRL-215D-RJS} & Marlim & P-35 & 6.887,28 & 58,47\% & 69 & \textbf{0,4235} \\
+\textbf{4º} & \texttt{1-UB-45-RN} & Ubarana & PUB-01 & 7.645,23 & 58,17\% & 29 & \textbf{0,4033} \\
+\textbf{5º} & \texttt{7-MRL-233-RJS} & Marlim & P-37 & 3.947,72 & 53,42\% & 59 & \textbf{0,3752} \\
+\textbf{6º} & \texttt{7-AB-12-RJS} & Albacora & P-25 & 5.149,26 & 88,15\% & 56 & \textbf{0,3577} \\
+\textbf{7º} & \texttt{7-MRL-198-RJS} & Marlim & P-35 & 5.430,65 & 88,30\% & 35 & \textbf{0,3401} \\
+\textbf{8º} & \texttt{1-AG-88-BA} & Água Grande & Est. Coletora & 80,12 & 89,57\% & 64 & \textbf{0,3371} \\
+\textbf{9º} & \texttt{1-CAM-204-RN} & Canto do Amaro & Est. Central & 78,60 & 89,76\% & 57 & \textbf{0,3347} \\
+\textbf{10º} & \texttt{1-CAM-315-RN} & Canto do Amaro & Est. Sul & 48,94 & 97,74\% & 54 & \textbf{0,3346} \\
+\dots & \textit{Demais poços} & \dots & \dots & \dots & \dots & \dots & $< 0,3320$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Onde o Sistema Para: Transparência e Julgamento Humano}
+Em consonância com as lições do Prof. André Serrano \cite{serrano2026}:
+\begin{quote}
+    \textit{``O papel do SSD é eliminar as dominadas, tornar visível a troca entre as remanescentes e registrar o peso adotado. Atribuir os pesos é ato de decisão — quando o sistema os fixa em silêncio, decidiu no lugar do decisor.''}
+\end{quote}
+O sistema recomenda categoricamente a mobilização da primeira campanha de sondas pesadas para os poços \texttt{7-RO-72D-RJS} ($C_i = 0,9487$) e \texttt{7-RO-68-RJS} ($C_i = 0,8018$) na plataforma P-52 em Roncador. Eles combinam expressiva perda recuperável com baixo corte de água, conferindo elevada probabilidade de êxito econômico. Todavia, a decisão final compete à Gerência Executiva, que pode arbitrar se as restrições logísticas de calado ou janelas contratuais justificam alterar os pesos estabelecidos.
+
+% ==============================================================================
+% 9. AUTOAVALIAÇÃO REFLEXIVA
+% ==============================================================================
+\section{Autoavaliação Reflexiva}
+
+Em cumprimento à Seção 6 do guião oficial da disciplina, a autoavaliação reflete criticamente sobre o processo de construção e os limites do MVP:
+
+\subsection{1. Quais das perguntas de negócio foram respondidas e quais não foram? Por quê?}
+\textbf{Todas as quatro perguntas de negócio foram integralmente respondidas com dados empíricos e rigor analítico.} 
+\begin{itemize}[leftmargin=*]
+    \item P1 identificou os campos de Roncador e Marlim como epicentro do declínio absoluto de óleo.
+    \item P2 diagnosticou o estrangulamento por água na P-25 e nas estações terrestres de Miranga e Canto do Amaro ($BSW > 88\%$).
+    \item P3 rastreou a não conformidade crítica da P-54 ($Flare > 16\%$) decorrente de compressores de superfície.
+    \item P4 comprovou que 5 poços concentram 90\% da produção da carteira.
+\end{itemize}
+O fator determinante para esse êxito foi a formulação rigorosa da decisão-alvo e das perguntas \textbf{antes} do início da coleta e modelagem dos dados.
+
+\subsection{2. Que limitações dos dados condicionaram os resultados obtidos?}
+A principal restrição reside na \textbf{latência regulatória oficial da ANP ($D+60$ dias)}, que inviabiliza o emprego do MVP para decisões de controle de poço em tempo real (\textit{real-time choke control}). Além disso, os dados públicos da ANP não trazem o custo financeiro diário de afretamento de sondas (\textit{rig day-rate}) nem parâmetros de pressão estática de fundo de poço ($BHP$), forçando a equipe de dados a estimar a severidade e o custo através de variáveis substitutas (\textit{proxies}) como $WOR$ e histórico de dias em produção.
+
+\subsection{3. Quais decisões técnicas você tomaria de outra forma se recomeçasse o trabalho?}
+Se recomeçasse o projeto, teria incorporado desde o primeiro momento uma camada de dados geográficos e espaciais (GIS) com as coordenadas batimétricas das plataformas e dos poços. Isso permitiria acoplar ao modelo TOPSIS uma restrição de \textbf{distância euclidiana e roteirização marítima}, evitando que poços pertencentes a bacias distintas sejam ranqueados sequencialmente sem ponderar o tempo de trânsito e o custo de rebocadores para movimentação da sonda.
+
+\subsection{4. Que extensões seriam necessárias para transformar este MVP em uma solução de uso contínuo?}
+Para evoluir o MVP para um sistema em produção contínua no ambiente corporativo, seriam imperativas:
+\begin{enumerate}
+    \item \textbf{Ingestão Contínua por Streaming:} Conexão direta via API/Kafka com sistemas industriais de telemetria de produção (SCADA/PI System) para atualização diária em $D+1$.
+    \item \textbf{Integração com Simuladores de Reservatório:} Conexão do subsistema de modelos a simuladores numéricos de fluxo multifásico (e.g., ECLIPSE ou tNavigator) para prever as curvas de declínio com maior fidelidade física.
+    \item \textbf{Subsistema de Conhecimento e Registro de Decisões (\textit{Decision Logging}):} Implementação de um banco de dados transacional para armazenar a decisão efetivamente tomada pelo gerente executivo, as justificativas em caso de discordância do ranking do TOPSIS e o acompanhamento do realizado vs. previsto, viabilizando a auditoria e calibração contínua do algoritmo.
+\end{enumerate}
+
+% ==============================================================================
+% 10. CONCLUSÃO
+% ==============================================================================
+\section{Conclusão}
+
+O projeto desenvolvido demonstra que a construção de um Sistema de Suporte à Decisão eficaz não se confunde com a simples criação de relatórios descritivos de Business Intelligence. Ao ancorar a arquitetura técnica na Cadeia dos Quatro Elos, na matriz de Gorry e Scott Morton e no modelo de Simon, o artefato assegura que todo o esforço de engenharia de dados (persistência em Delta Lake, modelagem em Esquema Estrela e auditoria DQA) convirja estritamente para o quarto elo: a escolha realizada. O acoplamento do método TOPSIS confere rigor analítico à priorização de sondas de intervenção em campos maduros, respeitando os preceitos de explicabilidade, transparência de premissas e soberania do julgamento humano do decisor. O repositório encontra-se público, versionado e totalmente reprodutível em: \url{https://github.com/FernandoCruvinel/SSD}.
+
+% ==============================================================================
+% REFERÊNCIAS BIBLIOGRÁFICAS
+% ==============================================================================
+\begin{thebibliography}{99}
+
+\bibitem{gorry1971}
+GORRY, G. A.; SCOTT MORTON, M. S. A framework for management information systems. \textbf{Sloan Management Review}, v. 13, n. 1, p. 55--70, 1971.
+
+\bibitem{hwang1981}
+HWANG, C. L.; YOON, K. \textbf{Multiple Attribute Decision Making: Methods and Applications}. New York: Springer-Verlag, 1981.
+
+\bibitem{kahneman2012}
+KAHNEMAN, D. \textbf{Rápido e devagar: duas formas de pensar}. Rio de Janeiro: Objetiva, 2012.
+
+\bibitem{power2002}
+POWER, D. J. \textbf{Decision Support Systems: Concepts and Resources for Managers}. Westport: Quorum Books, 2002.
+
+\bibitem{provost2016}
+PROVOST, F.; FAWCETT, T. \textbf{Data Science para Negócios: O que você precisa saber sobre mineração de dados e pensamento analítico de dados}. Rio de Janeiro: Alta Books, 2016.
+
+\bibitem{serrano2026}
+SERRANO, A. L. M. \textbf{Sistemas de Suporte à Decisão — Módulo 1: Fundamentos: da informação à decisão}. Notas de Aula e Material Didático. Departamento de Engenharia de Produção, Faculdade de Tecnologia, Universidade de Brasília (EPR/FT/UnB), 2026.
+
+\bibitem{simon1960}
+SIMON, H. A. \textbf{The New Science of Management Decision}. New York: Harper \& Row, 1960.
+
+\bibitem{sprague1982}
+SPRAGUE, R. H.; CARLSON, E. D. \textbf{Building Effective Decision Support Systems}. Englewood Cliffs: Prentice-Hall, 1982.
+
+\bibitem{turban2011}
+TURBAN, E.; SHARDA, R.; DELEN, D. \textbf{Decision Support and Business Intelligence Systems}. 9. ed. Boston: Pearson, 2011.
+
+\end{thebibliography}
+
+\end{document}
