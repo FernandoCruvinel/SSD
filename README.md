@@ -200,6 +200,8 @@ A garantia de integridade da base foi formalizada no módulo [`scripts/validacao
 
 > **Score Global Médio de Conformidade:** **`99.17%`** (Base qualificada para instruir decisões corporativas de alto investimento). O apontamento de alerta na dimensão **Atualidade** decorre do lapso temporal legal de homologação fiscal do BMP pela ANP, condição conhecida e incorporada no planejamento tático.
 
+![Auditoria de Qualidade de Dados (DQA)](evidencias/06_resumo_qualidade_dados.png)
+
 ---
 
 ## 7. SOLUÇÃO DO PROBLEMA DECISÓRIO E DISCUSSÃO DOS RESULTADOS
@@ -210,6 +212,9 @@ As respostas analíticas foram geradas e validadas por meio do script [`notebook
 
 ### Pergunta 1: Declínio e Impacto Volumétrico
 *Que campos e instalações concentram a maior perda absoluta e percentual de produção de óleo ao longo do tempo?*
+
+#### Evidência Visual Analítica:
+![Declínio Volumétrico e Perda de Óleo por Ativo](evidencias/01_declinio_producao_oleo.png)
 
 #### Evidência Analítica (SQL / Camada Gold):
 ```sql
@@ -252,6 +257,9 @@ ORDER BY perda_absoluta_bbl DESC;
 ### Pergunta 2: Severidade Operacional e Corte de Água (BSW / WOR)
 *Qual é a razão entre água e óleo por instalação, apontando ativos com sobrecarga no manuseio de efluentes?*
 
+#### Evidência Visual Analítica:
+![Severidade do Corte de Água e WOR por Instalação](evidencias/02_severidade_bsw_corte_agua.png)
+
 #### Tabela de Resultados Executivos:
 | Instalação | Tipo de Unidade | Campo | Total Óleo ($m^3$) | Total Água ($m^3$) | BSW Ponderado (%) | Razão Água-Óleo (WOR) | Classificação Operacional |
 |:---|:---|:---|:---:|:---:|:---:|:---:|:---:|
@@ -272,6 +280,9 @@ ORDER BY perda_absoluta_bbl DESC;
 ### Pergunta 3: Aproveitamento vs. Queima de Gás Natural (Flare Ratio)
 *Qual o percentual de queima em tocha face ao volume total extraído por instalação?*
 
+#### Evidência Visual Analítica:
+![Aproveitamento e Queima em Tocha de Gás Natural](evidencias/03_aproveitamento_flare_gas.png)
+
 #### Tabela de Resultados Executivos:
 | Instalação | Campo | Gás Extraído ($Mm^3$) | Gás Queimado ($Mm^3$) | Gás Aproveitado ($Mm^3$) | Flare Ratio (%) | Enquadramento Regulatório (ANP) |
 |:---|:---|:---:|:---:|:---:|:---:|:---:|
@@ -288,6 +299,9 @@ ORDER BY perda_absoluta_bbl DESC;
 
 ### Pergunta 4: Concentração e Vulnerabilidade Operacional (Pareto 80/20)
 *Qual é o grau de concentração da produção nos poços de topo e qual o impacto de parada não programada?*
+
+#### Evidência Visual Analítica:
+![Curva de Pareto 80-20 e Vulnerabilidade de Produção](evidencias/04_curva_pareto_vulnerabilidade.png)
 
 #### Tabela de Resultados Executivos (Classificação ABC de Pareto):
 | Código do Poço | Campo | Instalação | Ambiente | Produção Total (bbl) | Participação (%) | Acumulado (%) | Classificação ABC |
@@ -321,6 +335,9 @@ A matriz de decisão considera 15 poços maduros sob quatro critérios conflitan
 4. **$C_4$ (Benefício/Oportunidade - Peso: 20%):** Dias Parados no Histórico Recente $\rightarrow$ Maior valor reflete oportunidade de ganho imediato restaurando a disponibilidade física.
 
 ### 8.2 Ranking Final de Alocação de Sondas de Workover (TOPSIS)
+
+#### Evidência Visual Analítica:
+![Ranking Multicritério TOPSIS para Sondas de Intervenção](evidencias/05_ranking_priorizacao_topsis.png)
 
 | Prioridade | Código do Poço | Campo | Instalação | Ambiente | Perda de Óleo ($m^3$) | BSW Médio (%) | Dias Parados | Escore TOPSIS ($C_i$) |
 |:---:|:---|:---|:---|:---:|:---:|:---:|:---:|:---:|
