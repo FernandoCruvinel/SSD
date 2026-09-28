@@ -1,0 +1,35 @@
+# LICENÇA DE SOFTWARE E DECLARAÇÃO DE GOVERNANÇA DE DADOS
+
+---
+
+## 1. LICENÇA DO CÓDIGO-FONTE: MIT LICENSE
+
+Copyright (c) 2026 Alunos do Departamento de Engenharia de Produção (EPR)  
+Faculdade de Tecnologia (FT) - Universidade de Brasília (UnB)  
+Disciplina: Sistemas de Suporte à Decisão (SSD) - Prof. Dr. André Luiz Marques Serrano
+
+A permissão é concedida, gratuitamente, a qualquer pessoa que obtenha uma cópia deste software e dos arquivos de documentação associados (o "Software"), para lidar com o Software sem restrições, incluindo, sem limitação, os direitos de usar, copiar, modificar, mesclar, publicar, distribuir, sublicenciar e/ou vender cópias do Software, e para permitir que as pessoas a quem o Software é fornecido o façam, sob as seguintes condições:
+
+O aviso de direitos autorais acima e este aviso de permissão devem ser incluídos em todas as cópias ou partes substanciais do Software.
+
+O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA", SEM NENHUM TIPO DE GARANTIA, EXPRESSA OU IMPLÍCITA, INCLUINDO, MAS NÃO SE LIMITANDO ÀS GARANTIAS DE COMERCIALIZAÇÃO, ADEQUAÇÃO A UM FIM ESPECÍFICO E NÃO VIOLAÇÃO. EM NENHUM CASO OS AUTORES OU TITULARES DE DIREITOS AUTORAIS SERÃO RESPONSÁVEIS POR QUALQUER RECLAMAÇÃO, DANOS OU OUTRA RESPONSABILIDADE, SEJA EM UMA AÇÃO DE CONTRATO, ILÍCITO OU DE OUTRA FORMA, DECORRENTE DE, OU EM CONEXÃO COM O SOFTWARE OU O USO OU OUTRAS NEGOCIAÇÕES NO SOFTWARE.
+
+---
+
+## 2. DECLARAÇÃO DE USO E LICENCIAMENTO DOS DADOS ABERTOS DA ANP
+
+Este projeto utiliza dados públicos de produção de hidrocarbonetos fornecidos pela **Agência Nacional do Petróleo, Gás Natural e Biocombustíveis (ANP)** por meio do **Boletim Mensal da Produção de Petróleo e Gás Natural (BMP)**, disponibilizado no Portal Brasileiro de Dados Abertos (`dados.gov.br`).
+
+### 2.1 Amparo Legal e Política de Dados Abertos
+- **Lei Federal nº 12.527/2011 (Lei de Acesso à Informação - LAI):** Assegura o direito fundamental de acesso a informações produzidas ou custodiadas pelo Estado brasileiro.
+- **Decreto Presidencial nº 8.777/2016 (Política de Dados Abertos do Poder Executivo Federal):** Determina a abertura e o livre reuso de bases de dados governamentais em formatos abertos e legíveis por máquina.
+- **Termos de Uso de Dados Abertos Governamentais (CC-BY 4.0):** É autorizada a livre redistribuição, cópia, transformação e criação de trabalhos derivados, desde que mantida a atribuição da fonte primária (ANP/Governo Federal do Brasil).
+
+### 2.2 Conformidade com a Lei Geral de Proteção de Dados (LGPD - Lei nº 13.709/2018)
+- **Ausência Estrita de Dados Pessoais:** O conjunto de dados utilizado compreende exclusivamente métricas físicas e operacionais de infraestrutura industrial (vazão de óleo, gás e água, pressões e tempo em operação de poços e plataformas). Não há qualquer dado pessoal ou dado pessoal sensível relativo a operadores, engenheiros ou cidadãos.
+- **Segurança e Confidencialidade Industrial:** Os dados de produção por poço são divulgados publicamente pela autoridade reguladora após o cumprimento do prazo de confidencialidade previsto nos contratos de concessão e partilha de produção de E&P no Brasil.
+
+---
+
+## 3. PROPRIEDADE INTELECTUAL E FINALIDADE ACADÊMICA
+O presente trabalho constitui o Produto Mínimo Viável (MVP) avaliativo da disciplina de Sistemas de Suporte à Decisão da Universidade de Brasília, tendo finalidade estritamente pedagógica, científica e analítica, orientada ao avanço das práticas de Engenharia de Dados e Engenharia de Produção no setor energético.
